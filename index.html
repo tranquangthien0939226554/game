@@ -38,7 +38,6 @@
             height: 100%;
             background: #333;
         }
-        /* Giao diện HUD điểm số */
         #hud {
             position: absolute;
             top: 15px;
@@ -46,21 +45,19 @@
             transform: translateX(-50%);
             display: flex;
             gap: 15px;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.8);
             padding: 8px 20px;
             border-radius: 30px;
             border: 2px solid #ff9f43;
             color: #fff;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
             white-space: nowrap;
             z-index: 10;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
         #hud span b {
             color: #ffff2e;
         }
-        /* Màn hình Menu / Thua cuộc */
         .screen {
             position: absolute;
             inset: 0;
@@ -76,7 +73,7 @@
             color: #fff;
         }
         .screen h1 {
-            font-size: 28px;
+            font-size: 26px;
             color: #ffd200;
             text-shadow: 0 4px 0 #c2400c;
             line-height: 1.2;
@@ -86,7 +83,7 @@
             font-size: 14px;
             color: #ddd;
             margin-bottom: 20px;
-            max-width: 80%;
+            max-width: 85%;
             line-height: 1.5;
         }
         .btn {
@@ -100,7 +97,6 @@
             font-weight: 900;
             cursor: pointer;
             box-shadow: 0 5px 0 #a02020, 0 8px 15px rgba(0,0,0,0.4);
-            transition: transform 0.1s;
         }
         .btn:active {
             transform: translateY(4px);
@@ -111,8 +107,8 @@
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
             text-align: center;
             pointer-events: none;
             z-index: 5;
@@ -129,13 +125,12 @@
     </div>
 
     <div id="menu-screen" class="screen">
-        <h1 id="menu-title">🏃‍♂️ ĐƯỜNG ĐUA VỈA HÈ<br>ONG BÁN CHÁO THÁO CHẠY</h1>
-        <p id="menu-desc">Bà bán trái cây lạng lách ném sầu riêng phía trước! Ô tô cảnh sát rượt đuổi phía sau! Hãy giúp ông bán cháo đẩy xe thoát thân!</p>
+        <h1 id="menu-title">🏃‍♂️ ĐƯỜNG ĐUA VỈA HÈ<br>ÔNG BÁN CHÁO THÁO CHẠY</h1>
+        <p id="menu-desc">Né tránh trái cây lạng lách từ phía trước! Chạy thoát khỏi xe ô tô đang rượt đuổi phía sau!</p>
         <button class="btn" id="start-btn" onclick="startGame()">▶ PHÓNG XE NGAY</button>
     </div>
 
-    <div id="control-hint">💻 Dùng phím Mũi tên Trái/Phải | 📱 Vuốt/Chạm hai bên màn hình</div>
-    
+    <div id="control-hint">💻 Phím Mũi tên Trái/Phải | 📱 Vuốt kéo trái/phải trên màn hình</div>
     <canvas id="gameCanvas"></canvas>
 </div>
 
@@ -154,17 +149,13 @@
     let distanceTravelled = 0;
     let roadOffset = 0;
 
-    // Các thông số cấu hình vật thể
     let player, baTraiCay, otoBehind;
     let fruits = [];
     let items = [];
     let particles = [];
-    
-    // Quản lý đầu vào (Input)
     let keys = {};
     let touchStartX = 0;
 
-    // Kích thước chuẩn cố định để tính toán tỷ lệ responsive
     const V_WIDTH = 400;
     const V_HEIGHT = 700;
     let scale = 1;
@@ -178,48 +169,100 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // Khởi tạo các nhân vật và xe cộ trong game
-    class Entity {
-        constructor(x, y, w, h, speed, emoji, type) {
+    // Đối tượng nhân vật vẽ hoàn toàn bằng Canvas Shapes (Không dùng chữ Emoji)
+    class Character {
+        constructor(x, y, w, h, type) {
             this.x = x;
             this.y = y;
             this.w = w;
             this.h = h;
-            this.speed = speed;
-            this.emoji = emoji;
             this.type = type;
-            this.targetX = x; // Dùng cho Bà Trái Cây lạng lách
+            this.targetX = x;
+            this.speed = 5.5;
         }
 
         draw() {
             ctx.save();
-            ctx.textBaseline = 'middle';
-            ctx.textAlign = 'center';
-            
-            // Vẽ bóng đổ dưới chân xe
-            ctx.fillStyle = 'rgba(0,0,0,0.25)';
+            let rx = this.x * scale;
+            let ry = this.y * scale;
+            let rw = this.w * scale;
+            let rh = this.h * scale;
+
+            // Bóng đổ xe
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
             ctx.beginPath();
-            ctx.ellipse(this.x * scale, (this.y + this.h/2) * scale, (this.w/1.5) * scale, (this.h/3) * scale, 0, 0, Math.PI * 2);
+            ctx.ellipse(rx, ry + rh/3, rw/1.2, rh/2, 0, 0, Math.PI*2);
             ctx.fill();
 
-            // Nếu là ô tô cảnh sát đuổi phía sau, vẽ hiệu ứng đèn nháy còi hú
-            if (this.type === 'oto') {
-                let flash = Math.floor(Date.now() / 150) % 2 === 0;
-                ctx.fillStyle = flash ? '#ff3333' : '#3333ff';
+            if (this.type === 'player') {
+                // ÔNG BÁN CHÁO VÀ XE ĐẨY CHÁO
+                // Thân xe cháo (Khung vuông màu xanh lá mạ)
+                ctx.fillStyle = '#2ecc71';
+                ctx.fillRect(rx - rw/2, ry - rh/2, rw, rh * 0.7);
+                // Nồi cháo màu bạc trên xe
+                ctx.fillStyle = '#bdc3c7';
                 ctx.beginPath();
-                ctx.arc((this.x - this.w/3) * scale, (this.y - this.h/2) * scale, 8 * scale, 0, Math.PI*2);
-                ctx.arc((this.x + this.w/3) * scale, (this.y - this.h/2) * scale, 8 * scale, 0, Math.PI*2);
+                ctx.arc(rx, ry - rh/4, rw/3, 0, Math.PI*2);
                 ctx.fill();
+                // Nắp vung nồi cháo màu vàng nhạt
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(rx - rw/4, ry - rh/3, rw/2, 4 * scale);
+                // Tay cầm đẩy xe phía sau
+                ctx.strokeStyle = '#34495e';
+                ctx.lineWidth = 3 * scale;
+                ctx.strokeRect(rx - rw/2.2, ry + rh/5, rw * 0.9, rh * 0.2);
+                
+                // Đầu ông bán cháo nón lá góc nhìn từ trên xuống
+                ctx.fillStyle = '#e67e22'; // Màu nón lá vàng nâu
+                ctx.beginPath();
+                ctx.arc(rx, ry + rh/3, rw/3.5, 0, Math.PI*2);
+                ctx.fill();
+
+            } else if (this.type === 'batraicay') {
+                // BÀ BÁN TRÁI CÂY (Xe máy đỏ + sọt trái cây phía sau)
+                // Thân xe máy dài màu đỏ
+                ctx.fillStyle = '#e74c3c';
+                ctx.fillRect(rx - rw/4, ry - rh/2, rw/2, rh);
+                // Sọt hàng trái cây vuông màu vàng nâu
+                ctx.fillStyle = '#d35400';
+                ctx.fillRect(rx - rw/2, ry + rh/6, rw, rh * 0.35);
+                // Trái cây lố nhố màu xanh trong sọt
+                ctx.fillStyle = '#27ae60';
+                ctx.beginPath();
+                ctx.arc(rx - rw/4, ry + rh/4, 5 * scale, 0, Math.PI*2);
+                ctx.arc(rx + rw/4, ry + rh/4, 5 * scale, 0, Math.PI*2);
+                ctx.fill();
+                // Đầu người lái xe đội mũ bảo hiểm xanh dương
+                ctx.fillStyle = '#2980b9';
+                ctx.beginPath();
+                ctx.arc(rx, ry - rh/6, rw/3.5, 0, Math.PI*2);
+                ctx.fill();
+
+            } else if (this.type === 'oto') {
+                // XE Ô TÔ CẢNH SÁT RƯỢT ĐUỔI
+                // Thân xe ô tô hình chữ nhật bo góc lớn màu xanh đen thanh lịch
+                ctx.fillStyle = '#1e3799';
+                ctx.fillRect(rx - rw/2, ry - rh/2, rw, rh);
+                // Nóc xe màu trắng
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(rx - rw/2.8, ry - rh/4, rw/1.4, rh/1.8);
+                // Kính chắn gió trước/sau (Màu đen)
+                ctx.fillStyle = '#2f3542';
+                ctx.fillRect(rx - rw/3, ry - rh/3, rw/1.5, 6 * scale);
+                ctx.fillRect(rx - rw/3, ry + rh/4, rw/1.5, 6 * scale);
+
+                // Đèn còi hú nháy liên tục đỏ/xanh trên nóc
+                let flash = Math.floor(Date.now() / 120) % 2 === 0;
+                ctx.fillStyle = flash ? '#ff4757' : '#2f3542';
+                ctx.fillRect(rx - rw/4, ry - 4*scale, rw/4, 8 * scale);
+                ctx.fillStyle = flash ? '#2f3542' : '#54a0ff';
+                ctx.fillRect(rx, ry - 4*scale, rw/4, 8 * scale);
             }
 
-            // Vẽ Emoji đại diện góc nhìn từ trên xuống
-            ctx.font = `${this.w * scale}px Arial`;
-            ctx.fillText(this.emoji, this.x * scale, this.y * scale);
             ctx.restore();
         }
     }
 
-    // Thiết lập ban đầu khi bắt đầu chơi
     function initGame() {
         score = 0;
         distanceTravelled = 0;
@@ -227,61 +270,57 @@
         items = [];
         particles = [];
         
-        // Người chơi: Ông bán cháo nằm gần cuối màn hình
-        player = new Entity(V_WIDTH / 2, V_HEIGHT - 160, 48, 48, 5, '🥣', 'player');
-        player.carDanger = 100; // Khoảng cách an toàn ban đầu với ô tô phía sau (tính bằng pixel)
+        player = new Character(V_WIDTH / 2, V_HEIGHT - 160, 42, 50, 'player');
+        player.carDanger = 100;
 
-        // Đối thủ phía trước: Bà bán trái cây lạng lách
-        baTraiCay = new Entity(V_WIDTH / 2, 120, 46, 46, 2.5, '🛵', 'batraicay');
+        baTraiCay = new Character(V_WIDTH / 2, 110, 40, 44, 'batraicay');
+        baTraiCay.speed = 3;
         
-        // Mối nguy hiểm phía sau: Ô tô rượt đuổi sát nút
-        otoBehind = new Entity(V_WIDTH / 2, V_HEIGHT - 40, 65, 75, 0, '🚔', 'oto');
+        otoBehind = new Character(V_WIDTH / 2, V_HEIGHT - 40, 60, 80, 'oto');
 
         hudScore.textContent = '0';
         hudDistance.textContent = '0m';
     }
 
-    // Lệnh tạo trái cây phá hoại từ Bà Trái Cây đi trước
     let fruitSpawnTimer = 0;
     function handleFruitSpawning() {
         fruitSpawnTimer++;
-        if (fruitSpawnTimer > 45) { // Cứ khoảng gần 1 giây ném 1 quả
+        if (fruitSpawnTimer > 40) {
             fruitSpawnTimer = 0;
-            const fruitEmojis = ['🍉', '🍍', '🍌', '🥥', '🥭'];
-            let randomEmoji = fruitEmojis[Math.floor(Math.random() * fruitEmojis.length)];
-            // Ném trái cây ngay tại vị trí bà bán trái cây đang chạy lạng lách
+            // Chọn ngẫu nhiên loại quả (0: Sầu riêng xanh khía, 1: Dưa hấu đỏ, 2: Chuối vàng)
+            let typeIdx = Math.floor(Math.random() * 3);
+            let colors = ['#27ae60', '#e74c3c', '#f1c40f'];
             fruits.push({
                 x: baTraiCay.x,
                 y: baTraiCay.y + 15,
-                w: 26,
-                h: 26,
-                emoji: randomEmoji,
-                speedY: 4.5 + Math.random() * 2, // Trái cây bay ngược về phía sau
-                speedX: (Math.random() - 0.5) * 2 // Bay hơi chéo một chút
+                r: 11,
+                color: colors[typeIdx],
+                type: typeIdx,
+                speedY: 5 + Math.random() * 2,
+                speedX: (Math.random() - 0.5) * 2.5
             });
         }
     }
 
-    // Tạo các bát cháo bổ dưỡng hoặc đồng xu rơi trên đường để người chơi nhặt
     let itemSpawnTimer = 0;
     function handleItemSpawning() {
         itemSpawnTimer++;
-        if (itemSpawnTimer > 70) {
+        if (itemSpawnTimer > 65) {
             itemSpawnTimer = 0;
-            let lanes = [80, 140, 200, 260, 320];
+            let lanes = [85, 140, 200, 260, 315];
             let targetLane = lanes[Math.floor(Math.random() * lanes.length)];
+            let isGold = Math.random() > 0.4; // Vàng xu hoặc bát cháo
             items.push({
                 x: targetLane,
                 y: -20,
-                w: 24,
-                h: 24,
-                emoji: Math.random() > 0.4 ? '🪙' : '🍲', // 🪙 là tiền xu, 🍲 là cháo tăng tốc
+                r: 9,
+                isGold: isGold,
+                color: isGold ? '#f1c40f' : '#3498db',
                 speedY: 4
             });
         }
     }
 
-    // Hiệu ứng nổ hạt bụi lấp lánh khi ăn điểm hoặc đâm trúng chướng ngại vật
     function createParticles(x, y, color, count) {
         for (let i = 0; i < count; i++) {
             particles.push({
@@ -289,89 +328,74 @@
                 y: y,
                 vx: (Math.random() - 0.5) * 6,
                 vy: (Math.random() - 0.5) * 6,
-                size: Math.random() * 4 + 2,
+                size: Math.random() * 3 + 2,
                 color: color,
-                alpha: 1,
-                life: 30
+                life: 25
             });
         }
     }
 
-    // Vòng lặp cập nhật Logic của toàn bộ Game
     function update() {
         if (!gameActive) return;
 
-        // 1. Tốc độ di chuyển quãng đường
-        distanceTravelled += 0.2;
+        distanceTravelled += 0.22;
         hudDistance.textContent = Math.floor(distanceTravelled) + 'm';
         
-        // Cuộn hiệu ứng đường nhựa chạy xuống dưới
-        roadOffset += 7;
+        roadOffset += 7.5;
         if (roadOffset >= 60) roadOffset = 0;
 
-        // 2. Điều khiển xe Ông Bán Cháo (Player) bằng nút bấm bàn phím máy tính
+        // Xử lý nút bấm điều khiển
         if (keys['ArrowLeft'] || keys['a']) player.x -= player.speed;
         if (keys['ArrowRight'] || keys['d']) player.x += player.speed;
 
-        // Giới hạn biên không cho ông bán cháo đẩy xe lao ra khỏi lề đường
-        if (player.x < 65) player.x = 65;
-        if (player.x > 335) player.x = 335;
+        if (player.x < 75) player.x = 75;
+        if (player.x > 325) player.x = 325;
 
-        // 3. Logic xử lý xe Bà Trái Cây lạng lách tự động phía trước
-        if (Math.abs(baTraiCay.x - baTraiCay.targetX) < 5) {
-            // Chọn ngẫu nhiên một vị trí lạng lách mới trên 5 làn đường nhựa
-            let lanes = [80, 140, 200, 260, 320];
+        // Bà bán trái cây tự động lướt lạng lách thông minh
+        if (Math.abs(baTraiCay.x - baTraiCay.targetX) < 6) {
+            let lanes = [90, 150, 200, 250, 310];
             baTraiCay.targetX = lanes[Math.floor(Math.random() * lanes.length)];
         }
-        // Di chuyển mượt mà tới vị trí lạng lách mục tiêu
         if (baTraiCay.x < baTraiCay.targetX) baTraiCay.x += baTraiCay.speed;
         if (baTraiCay.x > baTraiCay.targetX) baTraiCay.x -= baTraiCay.speed;
 
-        // 4. Tạo và cập nhật vị trí các loại trái cây bay trên đường
+        // Di chuyển trái cây cản đường
         handleFruitSpawning();
         for (let i = fruits.length - 1; i >= 0; i--) {
             let f = fruits[i];
             f.y += f.speedY;
             f.x += f.speedX;
 
-            // Kiểm tra va chạm giữa xe Cháo và Trái cây bay trúng
+            // Xử lý đâm trúng trái cây nguy hiểm
             let pDistX = Math.abs(f.x - player.x);
             let pDistY = Math.abs(f.y - player.y);
-            if (pDistX < (player.w/1.5 + f.w/2) && pDistY < (player.h/1.5 + f.h/2)) {
-                // Đâm trúng trái cây: Xe ô tô cảnh sát đuổi sát đuôi thêm một chút!
-                player.carDanger -= 25; 
-                createParticles(f.x, f.y, '#ee5253', 12);
+            if (pDistX < (player.w/2 + f.r) && pDistY < (player.h/2 + f.r)) {
+                player.carDanger -= 25; // Bị thụt khoảng cách tụt lùi về phía sau
+                createParticles(f.x, f.y, f.color, 12);
                 fruits.splice(i, 1);
                 continue;
             }
 
-            // Xóa trái cây đi quá màn hình phía dưới
-            if (f.y > V_HEIGHT + 30) {
-                fruits.splice(i, 1);
-            }
+            if (f.y > V_HEIGHT + 30) fruits.splice(i, 1);
         }
 
-        // 5. Tạo và cập nhật các Vật phẩm thu hoạch (Cháo / Tiền xu)
+        // Di chuyển và nhặt vật phẩm
         handleItemSpawning();
         for (let i = items.length - 1; i >= 0; i--) {
             let it = items[i];
             it.y += it.speedY;
 
-            // Ăn trúng vật phẩm
             let pDistX = Math.abs(it.x - player.x);
             let pDistY = Math.abs(it.y - player.y);
-            if (pDistX < (player.w/1.5 + it.w/2) && pDistY < (player.h/1.5 + it.h/2)) {
-                if (it.emoji === '🍲') {
-                    // Ăn cháo nóng: Tăng tốc chạy xa khỏi ô tô rượt phía sau thêm 20 pixel
-                    player.carDanger = Math.min(180, player.carDanger + 20);
-                    score += 100;
-                    createParticles(it.x, it.y, '#5bc0de', 10);
+            if (pDistX < (player.w/2 + it.r) && pDistY < (player.h/2 + it.r)) {
+                if (!it.isGold) {
+                    player.carDanger = Math.min(180, player.carDanger + 20); // Tăng tốc bứt phá
+                    score += 150;
                 } else {
-                    // Ăn tiền xu: Tăng điểm thưởng trực tiếp cực mạnh
-                    score += 250;
-                    createParticles(it.x, it.y, '#f0ad4e', 10);
+                    score += 300; // Nhặt xu vàng
                 }
                 hudScore.textContent = score;
+                createParticles(it.x, it.y, it.color, 10);
                 items.splice(i, 1);
                 continue;
             }
@@ -379,88 +403,86 @@
             if (it.y > V_HEIGHT + 30) items.splice(i, 1);
         }
 
-        // 6. Cập nhật các hạt Particle hiệu ứng hình ảnh bay
+        // Hạt bụi nổ tung
         for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
             p.x += p.vx;
             p.y += p.vy;
             p.life--;
-            p.alpha = p.life / 30;
             if (p.life <= 0) particles.splice(i, 1);
         }
 
-        // 7. Xe Ô tô tuần tra rượt đuổi phía sau tính toán khoảng cách nguy hiểm
-        // Xe ô tô sẽ tự động bò tiến lên dần dần theo thời gian để tăng độ khó!
-        player.carDanger -= 0.08; 
-        
-        // Đồng bộ vị trí thực tế của xe ô tô dựa trên khoảng cách nguy hiểm nguy cấp
+        // Ô tô bám đuổi khốc liệt phía sau tiến dần lên theo thời gian
+        player.carDanger -= 0.09;
         otoBehind.y = player.y + (160 - player.carDanger);
-        // Xe ô tô luôn lượn lách dí sát theo trục X của người chơi
-        otoBehind.x += (player.x - otoBehind.x) * 0.12;
+        otoBehind.x += (player.x - otoBehind.x) * 0.15;
 
-        // ĐIỀU KIỆN THUA: Nếu xe ô tô rượt kịp và húc đổ xe cháo (khoảng cách nguy hiểm tụt về 0)
         if (player.carDanger <= 0) {
             endGame();
         }
     }
 
-    // Đồ họa vẽ toàn bộ màn hình Game góc nhìn từ trên xuống
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // 1. Vẽ mặt đường nhựa chính ở giữa lòng đường
-        ctx.fillStyle = '#4b5563'; // Màu xám đường nhựa nhựa
-        ctx.fillRect(50 * scale, 0, 300 * scale, canvas.height);
+        // Lòng đường chính màu xám đen nhựa
+        ctx.fillStyle = '#4b5563';
+        ctx.fillRect(55 * scale, 0, 290 * scale, canvas.height);
 
-        // 2. Vẽ hai bên vỉa hè gạch đi bộ
-        ctx.fillStyle = '#d97706'; // Vỉa hè gạch cam đất đỏ
-        ctx.fillRect(0, 0, 50 * scale, canvas.height);
-        ctx.fillRect(350 * scale, 0, 50 * scale, canvas.height);
+        // Vỉa hè hai bên lề đường màu cam gạch
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(0, 0, 55 * scale, canvas.height);
+        ctx.fillRect(345 * scale, 0, 55 * scale, canvas.height);
 
-        // Vẽ các đường gạch vỉa hè
+        // Các đường vân vỉa hè gạch lề
         ctx.fillStyle = '#b45309';
         for (let y = roadOffset; y < V_HEIGHT; y += 40) {
-            ctx.fillRect(0, y * scale, 50 * scale, 2 * scale);
-            ctx.fillRect(350 * scale, y * scale, 50 * scale, 2 * scale);
+            ctx.fillRect(0, y * scale, 55 * scale, 2 * scale);
+            ctx.fillRect(345 * scale, y * scale, 55 * scale, 2 * scale);
         }
 
-        // 3. Vẽ vạch kẻ đường đứt đoạn màu trắng giao thông
+        // Các vạch đứt đoạn phân làn giao thông màu trắng
         ctx.fillStyle = '#ffffff';
-        // Đường đua chia làm 2 vạch lớn phân làn chạy dọc xuống dưới
         for (let y = roadOffset - 60; y < V_HEIGHT; y += 60) {
-            ctx.fillRect(150 * scale, y * scale, 6 * scale, 30 * scale);
-            ctx.fillRect(250 * scale, y * scale, 6 * scale, 30 * scale);
+            ctx.fillRect(150 * scale, y * scale, 5 * scale, 30 * scale);
+            ctx.fillRect(245 * scale, y * scale, 5 * scale, 30 * scale);
         }
 
-        // 4. Vẽ các vật phẩm thu hoạch (Cháo, Xu) rơi trên lòng đường
+        // Vẽ vật phẩm thưởng (Đồng xu vàng / Bát cháo xanh)
         items.forEach(it => {
             ctx.save();
-            ctx.font = `${it.w * scale}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(it.emoji, it.x * scale, it.y * scale);
+            ctx.fillStyle = it.color;
+            ctx.beginPath();
+            ctx.arc(it.x * scale, it.y * scale, it.r * scale, 0, Math.PI*2);
+            ctx.fill();
+            // Vẽ viền sáng bóng cho đồng xu hoặc cháo
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1.5 * scale;
+            ctx.stroke();
             ctx.restore();
         });
 
-        // 5. Vẽ các loại Trái cây lạng lách ném ra từ phía trước
+        // Vẽ chướng ngại vật Trái cây
         fruits.forEach(f => {
             ctx.save();
-            ctx.font = `${f.w * scale}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(f.emoji, f.x * scale, f.y * scale);
+            ctx.fillStyle = f.color;
+            ctx.beginPath();
+            ctx.arc(f.x * scale, f.y * scale, f.r * scale, 0, Math.PI*2);
+            ctx.fill();
+            // Thêm một chấm đen nhỏ làm cuống trái cây để nhận diện đồ họa sinh động hơn
+            ctx.fillStyle = '#000';
+            ctx.fillRect((f.x - 2) * scale, (f.y - 2) * scale, 4 * scale, 4 * scale);
             ctx.restore();
         });
 
-        // 6. Vẽ các nhân vật chính (Ông bán cháo, bà trái cây, ô tô rượt đuổi)
+        // Vẽ 3 nhân vật cốt lõi bằng Vector hình khối
         if (otoBehind.y < V_HEIGHT + 80) otoBehind.draw();
         player.draw();
         baTraiCay.draw();
 
-        // 7. Vẽ hiệu ứng Hạt vụn nổ tung tóe
+        // Vẽ các hiệu ứng nổ nhỏ vụn
         particles.forEach(p => {
             ctx.save();
-            ctx.globalAlpha = p.alpha;
             ctx.fillStyle = p.color;
             ctx.beginPath();
             ctx.arc(p.x * scale, p.y * scale, p.size * scale, 0, Math.PI * 2);
@@ -468,45 +490,41 @@
             ctx.restore();
         });
         
-        // Vẽ cảnh báo nguy hiểm đỏ rực viền màn hình nếu xe ô tô quá sát đuôi
+        // Nhấp nháy viền đỏ nguy hiểm cảnh báo ô tô sắp đâm đít
         if (player && player.carDanger < 45) {
             ctx.save();
-            let alertAlpha = Math.abs(Math.sin(Date.now() / 100)) * 0.3;
+            let alertAlpha = Math.abs(Math.sin(Date.now() / 100)) * 0.35;
             ctx.strokeStyle = `rgba(238, 82, 83, ${alertAlpha})`;
-            ctx.lineWidth = 15 * scale;
+            ctx.lineWidth = 14 * scale;
             ctx.strokeRect(0, 0, canvas.width, canvas.height);
             ctx.restore();
         }
     }
 
-    // Vòng lặp Core lặp vô hạn của Game Engine
     function gameLoop() {
         update();
         draw();
         requestAnimationFrame(gameLoop);
     }
 
-    // Hàm gọi khi nhấn bắt đầu chơi mới
     function startGame() {
         initGame();
         gameActive = true;
         menuScreen.style.display = 'none';
     }
 
-    // Hàm xử lý khi người chơi bị ô tô tông đổ xe cháo
     function endGame() {
         gameActive = false;
         menuTitle.innerHTML = '💥 THUA RỒI! 🚔<br>XE CHÁO BỊ HÚC ĐỔ';
-        menuDesc.innerHTML = `Bạn đã tháo chạy được quãng đường dài <b style="color:#ff9f43">${Math.floor(distanceTravelled)} mét</b> và đạt tổng số <b style="color:#ff9f43">${score} điểm</b> trước khi bị bắt!`;
+        menuDesc.innerHTML = `Bạn đã tháo chạy được quãng đường dài <b style="color:#ff9f43">${Math.floor(distanceTravelled)} mét</b> và đạt tổng số <b style="color:#ff9f43">${score} điểm</b> trước khi bị xe bắt!`;
         startBtn.textContent = '🔄 CHƠI LẠI NGAY';
         menuScreen.style.display = 'flex';
     }
 
-    // --- KHU VỰC BẮT SỰ KIỆN ĐIỀU KHIỂN (MÁY TÍNH & ĐIỆN THOẠI cảm ứng) ---
+    // --- BẮT ĐẦU SỰ KIỆN ĐIỀU KHIỂN ---
     window.addEventListener('keydown', e => { keys[e.key] = true; });
     window.addEventListener('keyup', e => { keys[e.key] = false; });
 
-    // Hỗ trợ cảm ứng vuốt lướt trên màn hình điện thoại di động thông minh
     window.addEventListener('touchstart', e => {
         if (!gameActive) return;
         touchStartX = e.touches[0].clientX;
@@ -516,28 +534,19 @@
         if (!gameActive || !player) return;
         let touchX = e.touches[0].clientX;
         let diffX = touchX - touchStartX;
-        
-        // Di chuyển xe cháo dựa trên độ lệch vuốt tay của người dùng
-        player.x += diffX * 0.45;
-        touchStartX = touchX; // Cập nhật lại mốc chạm liên tục
+        player.x += diffX * 0.5;
+        touchStartX = touchX;
     }, { passive: true });
 
-    // Hỗ trợ chạm nhanh vào 2 bên mép trái/phải màn hình để chuyển làn xe cháo nhanh
     window.addEventListener('pointerdown', e => {
         if (!gameActive || !player) return;
         if (e.target.className === 'btn') return;
-        
         let clickPercent = e.clientX / window.innerWidth;
-        if (clickPercent < 0.4) {
-            player.x -= 20; // Bấm bên trái dịch sang trái
-        } else if (clickPercent > 0.6) {
-            player.x += 20; // Bấm bên phải dịch sang phải
-        }
+        if (clickPercent < 0.4) player.x -= 22;
+        else if (clickPercent > 0.6) player.x += 22;
     });
 
-    // Kích hoạt chạy vòng lặp nền ngay từ đầu
     requestAnimationFrame(gameLoop);
 </script>
-
 </body>
 </html>
